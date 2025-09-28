@@ -1,0 +1,6 @@
+.vscode
+.aider*
+.env
+__pycache__/
+*.pyc
+*.pyo
