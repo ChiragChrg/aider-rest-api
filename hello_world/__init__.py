@@ -1,1 +1,0 @@
-# This file makes the hello_world directory a Python package
