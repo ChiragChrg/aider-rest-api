@@ -23,8 +23,12 @@ class CodeAssistant(Resource):
             
             # Change to specified directory if provided
             original_dir = os.getcwd()
-            if directory and os.path.exists(directory):
-                os.chdir(directory)
+            if directory:
+                # Convert to absolute path and create if it doesn't exist
+                abs_directory = os.path.abspath(directory)
+                os.makedirs(abs_directory, exist_ok=True)
+                os.chdir(abs_directory)
+                print(f"Changed to directory: {abs_directory}")
             
             # Configure Aider options
             auto_commits = options.get('auto_commits', True)
