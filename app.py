@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
-import os
 from dotenv import load_dotenv
 from api.code_assistant import CodeAssistant
+from api.file_code_assistant import FileCodeAssistant
 
 # Load environment variables
 load_dotenv(override=True)
@@ -11,7 +11,8 @@ app = Flask(__name__)
 api = Api(app)
 
 # Add the code assistant endpoint
-api.add_resource(CodeAssistant, '/code_assistant')
+api.add_resource(CodeAssistant, '/code/prompt')
+api.add_resource(FileCodeAssistant, '/code/files')
 
 @app.route('/')
 def home():
@@ -19,7 +20,9 @@ def home():
         "message": "Aider REST API Server",
         "version": "1.0.0",
         "endpoints": {
-            "/code_assistant": "POST - Execute Aider code generation"
+            "/health": "GET - Health check",
+            "/code/prompt": "POST - Execute Aider code generation",
+            "/code/files": "POST - Upload files and execute Aider code generation",
         }
     })
 
