@@ -1,6 +1,7 @@
-from flask import Flask, request, jsonify
-from flask_restful import Api, Resource
+from flask import Flask, jsonify
+from flask_restful import Api
 from dotenv import load_dotenv
+
 from api.code_assistant import CodeAssistant
 from api.file_code_assistant import FileCodeAssistant
 
@@ -21,8 +22,8 @@ def home():
         "version": "1.0.0",
         "endpoints": {
             "/health": "GET - Health check",
-            "/code/prompt": "POST - Execute Aider code generation",
-            "/code/files": "POST - Upload files and execute Aider code generation",
+            "/code/prompt": "POST - Execute Aider code generation using /code prompt",
+            "/code/files": "POST - Upload files and execute Aider code generation using /architect prompt",
         }
     })
 
