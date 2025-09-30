@@ -9,6 +9,16 @@ from config import Config
 
 class FileCodeAssistant(Resource):
     def post(self):
+        """
+        The `post` function handles file uploads, processes the uploaded files using Aider, and returns
+        the result along with relevant information.
+        
+        Returns:
+          The code snippet is a Python function that handles file uploads, processes the uploaded files
+        using a specified model and coder, and returns a response containing information about the
+        processing status, directory used, files processed, and the model used. If an error occurs
+        during the process, it returns an error message along with a status code.
+        """
         try:
             # Handle file uploads
             uploaded_files = request.files.getlist('files')
