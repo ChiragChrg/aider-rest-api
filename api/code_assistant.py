@@ -63,7 +63,7 @@ class CodeAssistant(Resource):
                 instruction = f"/{aider_mode_prefix} {instruction}"
             
             # Specify to generate files in 'output' folder
-            instruction += "\n\nGenerate all the files inside the 'output' folder."
+            instruction += "\n\n Create a new directory for the generated files and save all the files inside the existing 'output' folder."
 
             # Execute the instruction
             result = coder.run(instruction)

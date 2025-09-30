@@ -1,21 +1,7 @@
 # Specification
-- Language: Python 3
-- Output: Single file `hello.py`
-- Behavior: Print the text `Hello Devs` to stdout.
+- Language: HTML, CSS and JavaScript
+- Output: A simple TODO web app
+- Behavior: When the user enters a task and clicks "Add", the task appears in a list below with a checkbox. Checking the box marks the task as completed (strikethrough text). Unchecking it marks it as incomplete. The user can add multiple tasks.
 
 # Task
-- Create a Python script with:
-  - Shebang (`#!/usr/bin/env python3`)
-  - A `main()` function that prints the message.
-  - A standard Python `if __name__ == "__main__": main()` entry point.
-
-# Plan
-1. Define `main()` function.
-2. Use `print("Hello Devs")`.
-3. Add entry point guard to call `main()` when run directly.
-4. Save as `hello.py`.
-
-# Example Output
-```bash
-$ python hello.py
-Hello Devs
+Create a simple TODO web application using HTML, CSS, and JavaScript that allows users to add tasks, mark them as completed, and view the list of tasks.
