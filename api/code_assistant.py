@@ -54,7 +54,10 @@ class CodeAssistant(Resource):
             )
             
             # Create model instance
-            model = Model(model_name)
+            model = Model(
+                model=model_name,
+                editor_model=model_name
+            )
             print(f"\nUsing model: {model_name}")
 
             # Create coder instance
@@ -65,6 +68,7 @@ class CodeAssistant(Resource):
                 auto_commits=auto_commits,
                 dirty_commits=dirty_commits,
                 dry_run=dry_run,
+                
             )
 
             # Define Aider mode based on prefix

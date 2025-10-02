@@ -57,7 +57,10 @@ class FileCodeAssistant(Resource):
             io = InputOutput(yes=True, pretty=False)
             
             # Create model and coder instances
-            model = Model(model_name)
+            model = Model(
+                model=model_name,
+                editor_model=model_name
+            )
             coder = Coder.create(
                 main_model=model,
                 fnames=saved_files,
