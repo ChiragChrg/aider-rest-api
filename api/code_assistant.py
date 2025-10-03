@@ -1,7 +1,8 @@
 import os
+import json
 from flask import request
 from flask_restful import Resource
-from aider.coders import Coder
+from aider.coders import Coder, ArchitectCoder
 from aider.models import Model
 from aider.io import InputOutput
 from config import Config
@@ -30,8 +31,17 @@ class CodeAssistant(Resource):
             files = data.get('files', [])
             directory = data.get('directory', os.getcwd())
             model_name = data.get('model', Config.MODEL)
-            aider_mode_prefix = data.get('aider_mode_prefix', '/code')
-            options = data.get('options', {})
+            # aider_mode_prefix = data.get('aider_mode_prefix', '/code') # Always use /architect for now
+
+            # Handle options parameter - it might be a JSON string
+            options_param = data.get('options', '{}')
+            try:
+                if isinstance(options_param, str):
+                    options = json.loads(options_param) if options_param else {}
+                else:
+                    options = options_param
+            except json.JSONDecodeError:
+                options = {}
             
             # Change to specified directory if provided
             original_dir = os.getcwd()
@@ -50,48 +60,67 @@ class CodeAssistant(Resource):
             # Create InputOutput with yes=True for non-interactive mode
             io = InputOutput(
                 yes=True,
-                pretty=False
+                pretty=False,
+                chat_history_file=None,
+                input_history_file=None,
             )
+
+            # Create output directory and specify clear instructions
+            output_dir = os.path.join(os.getcwd(), 'output')
+            os.makedirs(output_dir, exist_ok=True)
             
-            # Create model instance
-            model = Model(
-                model=model_name,
-                editor_model=model_name
-            )
-            print(f"\nUsing model: {model_name}")
+            # Create model and coder instances
+            try:
+                model = Model(model=model_name)
 
-            # Create coder instance
-            coder = Coder.create(
-                main_model=model,
-                fnames=files,
-                io=io,
-                auto_commits=auto_commits,
-                dirty_commits=dirty_commits,
-                dry_run=dry_run,
-                
-            )
-
-            # Define Aider mode based on prefix
-            if aider_mode_prefix.startswith("/") and not instruction.startswith(f"/{aider_mode_prefix}"):
-                instruction = f"{aider_mode_prefix} {instruction}"
-            elif not aider_mode_prefix.startswith("/") and not instruction.startswith(aider_mode_prefix):
-                instruction = f"/{aider_mode_prefix} {instruction}"
+                # if aider_mode_prefix in ['/architect', 'architect']:
+                coder = ArchitectCoder.create(
+                    main_model=model,
+                    fnames=[],  
+                    read_only_fnames=files,
+                    io=io,
+                    auto_commits=auto_commits,
+                    dirty_commits=dirty_commits,
+                    dry_run=dry_run,
+                )
+                # else:
+                #     coder = Coder.create(
+                #         main_model=model,
+                #         fnames=[],
+                #         read_only_fnames=files,
+                #         io=io,
+                #         auto_commits=auto_commits,
+                #         dirty_commits=dirty_commits,
+                #         dry_run=dry_run,
+                #     )
+            except Exception as e:
+                if original_dir:
+                    os.chdir(original_dir)
+                return {"error": f"Failed to initialize model/coder: {str(e)}"}, 500
             
             # Specify to generate files in 'output' folder
-            instruction += "\n\n Create a new directory for the generated files and save all the files inside the existing 'output' folder."
+            instruction += f"\n\nIMPORTANT: Create all new implementation files in a new folder with meaningful name related to the implementation inside the 'output' directory: {output_dir}."
 
             # Execute the instruction
-            result = coder.run(instruction)
+            try:
+                result = coder.run(instruction)
+                print(f"Coder execution completed successfully")
+            except Exception as e:
+                if original_dir:
+                    os.chdir(original_dir)
+                return {"error": f"Failed to execute coder: {str(e)}"}, 500
             
             # Return to original directory
-            os.chdir(original_dir)
+            if original_dir:
+                os.chdir(original_dir)
             
             return {
                 "response": result,
                 "status": "success",
                 "directory": directory,
-                "files_processed": files,
-                "model_used": model_name
+                "files_processed": [os.path.basename(f) for f in files],
+                "model_used": model_name,
+                "output_directory": output_dir
             }
             
         except Exception as e:
