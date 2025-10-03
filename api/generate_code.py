@@ -2,11 +2,11 @@ import os
 import json
 from flask import request
 from flask_restful import Resource
-from werkzeug.utils import secure_filename
 from aider.coders import ArchitectCoder
 from aider.models import Model
 from aider.io import InputOutput
 from config import Config
+from utils import build_instruction, zip_directory
 
 class GenerateCode(Resource):
     def post(self):
@@ -61,9 +61,14 @@ class GenerateCode(Resource):
             )
             
             # Create output directory and specify clear instructions
-            output_dir = os.path.join(original_dir, 'output')
-            os.makedirs(output_dir, exist_ok=True)
+            base_output_dir = os.path.join(original_dir, 'output')
+            os.makedirs(base_output_dir, exist_ok=True)
             
+            # Get list of existing directories before execution
+            existing_dirs = set()
+            if os.path.exists(base_output_dir):
+                existing_dirs = set(os.listdir(base_output_dir))
+
             # Create model and coder instances
             try:
                 model = Model(model=model_name)
@@ -82,9 +87,38 @@ class GenerateCode(Resource):
             
             # Execute the instruction
             try:
-                full_instruction = self.build_instruction(context, instruction, code_template, output_dir)
+                # The line `full_instruction = build_instruction(context, instruction, code_template,
+                # base_output_dir)` is calling a function named `build_instruction` with four
+                # arguments: `context`, `instruction`, `code_template`, and `base_output_dir`. This
+                # function is likely responsible for constructing a complete instruction or command
+                # based on the provided context, instruction, code template, and output directory.
+                full_instruction = build_instruction(context, instruction, code_template, base_output_dir)
                 result = coder.run(full_instruction)
                 print(f"Coder execution completed successfully")
+
+                # Detect the newly created directory inside 'output'
+                current_dirs = set()
+                if os.path.exists(base_output_dir):
+                    current_dirs = set(os.listdir(base_output_dir))
+                
+                new_dirs = current_dirs - existing_dirs
+                if new_dirs:
+                    # Use the first new directory found (there should typically be only one)
+                    new_dir_name = next(iter(new_dirs))
+                    output_dir = os.path.join(base_output_dir, new_dir_name)
+                    print(f"New output directory: {output_dir}")
+                else:
+                    output_dir = base_output_dir
+                    
+                # Zip the generated code directory and store in output_dir
+                zipfile = zip_directory(output_dir)
+                
+                # Store the zipfile in output dir
+                zip_name = new_dir_name if new_dirs else "output"
+                zip_path = os.path.join(base_output_dir, f"{zip_name}.zip")
+                with open(zip_path, 'wb') as f:
+                    f.write(zipfile.read())
+                
             except Exception as e:
                 return {"error": f"Failed to execute coder: {str(e)}"}, 500
             
@@ -107,47 +141,3 @@ class GenerateCode(Resource):
             # Return to original directory
             if original_dir:
                 os.chdir(original_dir)
-
-    def build_instruction(self, context, instruction, code_template, output_dir):
-        """
-        Build a comprehensive instruction string for the coder.
-        Ensures critical rules are included and formats the instruction properly.
-        Args:
-            context (str): The context for the code generation.
-            instruction (str): The main instruction for the coder.
-            code_template (str): Optional code template to guide the generation.
-            output_dir (str): The directory where output files should be created.
-        Returns:
-            str: The final instruction string.
-        """
-        final_instruction = []
-
-        if context:
-            final_instruction.append(f"CONTEXT:\n{context}\n\n")
-        if instruction:
-            strict_instruction = (
-                    f"{instruction}\n\n"
-                    "CRITICAL RULES:\n"
-                    "- Do not output any TODO placeholders or comments indicating incomplete code.\n"
-                    "- Do not leave functions, classes, methods, or modules unimplemented.\n"
-                    "- Always provide complete, working, production-ready code.\n"
-                    "- Do not return partial implementations or stubbed logic.\n"
-                    "- Validate and self-check the code before returning:\n"
-                    "  * Ensure there are no typos in identifiers or keywords.\n"
-                    "  * Ensure there are no syntax errors.\n"
-                    "  * Ensure that any type constraints, parameterized types, or contracts are satisfied.\n"
-                    "    For dynamically typed languages, ensure runtime checks or validations exist where needed.\n"
-                    "- Preserve consistency and correctness across all related constructs (types, functions, modules, interfaces, etc.).\n"
-                    "- If full implementation is not possible, stop and explain why instead of returning stubs or partial code.\n"
-                )
-            final_instruction.append(f"INSTRUCTION:\n{strict_instruction}\n\n")
-        if code_template:
-            final_instruction.append(f"CODE TEMPLATE:\n{code_template}\n\n")
-
-        # Specify output directory
-        final_instruction.append(
-            f"\n\nIMPORTANT: Create all new implementation files in a new folder with a meaningful name "
-            f"related to the implementation inside the 'output' directory: {output_dir}."
-        )
-
-        return ''.join(final_instruction).strip()
