@@ -3,7 +3,7 @@ import io
 import zipfile
 import json
 import requests
-
+import json
 
 # Utility method to build instruction
 def build_instruction(context:str, instruction:str, code_template:str, output_dir:str):
@@ -290,7 +290,7 @@ def upload_to_cloud(zipFile, zipName):
         
         if response.status_code == 201:
             print(f"Successfully uploaded {zipName} to cloud storage.")
-            print(f"Response: {response.json()}")
+            print(f"Response: {json.dumps(response.json(), indent=4)}")
         else:
             print(f"Failed to upload {zipName}. Status code: {response.status_code}, Response: {response.text}")
     
