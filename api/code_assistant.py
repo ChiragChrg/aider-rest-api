@@ -1,134 +1,90 @@
 import os
-import json
 from flask import request
 from flask_restful import Resource
-from aider.coders import Coder, ArchitectCoder
-from aider.models import Model
-from aider.io import InputOutput
 from config import Config
+from utils.common_utils import validate_json, setup_directory, build_instruction,create_zip_file
+from utils.aider_utils import create_coder, execute_instruction
 
 class CodeAssistant(Resource):
     def post(self):
         """
-        This Python function processes a POST request by executing an instruction with specified options
-        and returning the result along with relevant information.
-        
+        Route to handle code assistance requests.
+        Expects JSON payload with:
+        - instruction (str): The instruction to execute.
+        - files (list, optional): List of filenames to be read-only.
+        - directory (str, optional): Directory to operate in.
+        - model (str, optional): Model name to use.
+        - options (dict, optional): Additional options like auto_commits, dirty_commits, dry_run.
         Returns:
-          The code snippet is a Python method for handling a POST request. It receives JSON data,
-        validates required fields, sets various parameters based on the input data, configures options,
-        creates instances of classes, executes a given instruction using a coder instance, and returns a
-        response object containing the result of the instruction execution along with other relevant
-        information such as the status, directory used, files processed, and model used
+            dict: Response containing execution result, status, and output directory info.
         """
+        
         try:
-            data = request.get_json()
+            payload = request.get_json()
 
             # Validate required fields
-            if not data or 'instruction' not in data:
-                return {"error": "Instruction is required"}, 400
+            required_fields = ['instruction']
+            is_valid, data = validate_json(payload, required_fields)
             
+            # Return error if validation fails
+            if not is_valid:
+                raise ValueError(data)
+            
+             # Extract fields from the validated data
             instruction = data['instruction']
             files = data.get('files', [])
             directory = data.get('directory', os.getcwd())
             model_name = data.get('model', Config.MODEL)
-            # aider_mode_prefix = data.get('aider_mode_prefix', '/code') # Always use /architect for now
-
-            # Handle options parameter - it might be a JSON string
-            options_param = data.get('options', '{}')
-            try:
-                if isinstance(options_param, str):
-                    options = json.loads(options_param) if options_param else {}
-                else:
-                    options = options_param
-            except json.JSONDecodeError:
-                options = {}
+            options = data.get('options', {})
             
             # Change to specified directory if provided
             original_dir = os.getcwd()
-            if directory:
-                # Convert to absolute path and create if it doesn't exist
-                abs_directory = os.path.abspath(directory)
-                os.makedirs(abs_directory, exist_ok=True)
-                os.chdir(abs_directory)
-                print(f"Changed to directory: {abs_directory}")
+            base_output_dir =setup_directory(directory, original_dir)
             
             # Configure Aider options
             auto_commits = options.get('auto_commits', False)
             dirty_commits = options.get('dirty_commits', False) 
             dry_run = options.get('dry_run', False)
             
-            # Create InputOutput with yes=True for non-interactive mode
-            io = InputOutput(
-                yes=True,
-                pretty=False,
-                chat_history_file=None,
-                input_history_file=None,
-            )
-
-            # Create output directory and specify clear instructions
-            output_dir = os.path.join(os.getcwd(), 'output')
-            os.makedirs(output_dir, exist_ok=True)
+            # Get list of existing directories before execution
+            existing_dirs = set()
+            if os.path.exists(base_output_dir):
+                existing_dirs = set(os.listdir(base_output_dir))
             
             # Create model and coder instances
-            try:
-                model = Model(model=model_name)
-
-                # if aider_mode_prefix in ['/architect', 'architect']:
-                coder = ArchitectCoder.create(
-                    main_model=model,
-                    fnames=[],  
-                    read_only_fnames=files,
-                    io=io,
-                    auto_commits=auto_commits,
-                    dirty_commits=dirty_commits,
-                    dry_run=dry_run,
-                )
-                # else:
-                #     coder = Coder.create(
-                #         main_model=model,
-                #         fnames=[],
-                #         read_only_fnames=files,
-                #         io=io,
-                #         auto_commits=auto_commits,
-                #         dirty_commits=dirty_commits,
-                #         dry_run=dry_run,
-                #     )
-            except Exception as e:
-                if original_dir:
-                    os.chdir(original_dir)
-                return {"error": f"Failed to initialize model/coder: {str(e)}"}, 500
+            coder = create_coder(
+                model_name=model_name,
+                files=files,
+                auto_commits=auto_commits,
+                dirty_commits=dirty_commits,
+                dry_run=dry_run
+            )
             
-            # Specify to generate files in 'output' folder
-            instruction += f"\n\nIMPORTANT: Create all new implementation files in a new folder with meaningful name related to the implementation inside the 'output' directory: {output_dir}."
-
+            # Build complete instruction
+            full_instruction = build_instruction(None,instruction,None, base_output_dir)
+            
             # Execute the instruction
-            try:
-                result = coder.run(instruction)
-                print(f"Coder execution completed successfully")
-            except Exception as e:
-                if original_dir:
-                    os.chdir(original_dir)
-                return {"error": f"Failed to execute coder: {str(e)}"}, 500
+            result = execute_instruction(coder, full_instruction)
             
-            # Return to original directory
-            if original_dir:
-                os.chdir(original_dir)
+            # Create zip file of the new output directory
+            output_dir = create_zip_file(base_output_dir, existing_dirs)
             
             return {
                 "response": result,
-                "status": "success",
+                "status": 201,
                 "directory": directory,
                 "files_processed": [os.path.basename(f) for f in files],
                 "model_used": model_name,
                 "output_directory": output_dir
             }
-            
-        except Exception as e:
-            # Ensure we return to original directory on error
-            if 'original_dir' in locals():
+        
+        except ValueError as e:
+            return {"ValueError": str(e)}, 400
+        
+        except Exception as e:           
+            print(f"Error in CodeAssistant: {str(e)}")
+            return {"error": str(e), "status": "error"}, 500
+        finally:
+            # Return to original directory
+            if original_dir:
                 os.chdir(original_dir)
-            
-            return {
-                "error": str(e),
-                "status": "error"
-            }, 500

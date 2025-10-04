@@ -6,7 +6,7 @@ from aider.coders import ArchitectCoder
 from aider.models import Model
 from aider.io import InputOutput
 from config import Config
-from utils import build_instruction, zip_directory
+from utils.common_utils import build_instruction, zip_directory
 
 class GenerateCode(Resource):
     def post(self):
