@@ -2,3 +2,4 @@ aider-chat>=0.16.0,<0.83.0
 flask>=3.0.0
 flask-restful>=0.3.10
 python-dotenv>=1.0.0
+google-generativeai>=0.3.0

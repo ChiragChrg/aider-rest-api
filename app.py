@@ -1,8 +1,10 @@
-from flask import Flask, request, jsonify
-from flask_restful import Api, Resource
+from flask import Flask, jsonify
+from flask_restful import Api
 from dotenv import load_dotenv
+
 from api.code_assistant import CodeAssistant
 from api.file_code_assistant import FileCodeAssistant
+from api.generate_code import GenerateCode
 
 # Load environment variables
 load_dotenv(override=True)
@@ -13,6 +15,7 @@ api = Api(app)
 # Add the code assistant endpoint
 api.add_resource(CodeAssistant, '/code/prompt')
 api.add_resource(FileCodeAssistant, '/code/files')
+api.add_resource(GenerateCode, '/code/generate')
 
 @app.route('/')
 def home():
@@ -21,8 +24,9 @@ def home():
         "version": "1.0.0",
         "endpoints": {
             "/health": "GET - Health check",
-            "/code/prompt": "POST - Execute Aider code generation",
-            "/code/files": "POST - Upload files and execute Aider code generation",
+            "/code/prompt": "POST - Execute Aider code generation using /code prompt",
+            "/code/files": "POST - Upload files and execute Aider code generation using /architect prompt",
+            "/code/generate": "POST - Generate code by providing : Context, Instruction, Code Template"
         }
     })
 
