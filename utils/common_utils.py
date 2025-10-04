@@ -2,6 +2,8 @@ import os
 import io
 import zipfile
 import json
+import requests
+import json
 
 # Utility method to build instruction
 def build_instruction(context:str, instruction:str, code_template:str, output_dir:str):
@@ -19,34 +21,45 @@ def build_instruction(context:str, instruction:str, code_template:str, output_di
     final_instruction = []
 
     if context:
-        final_instruction.append(f"CONTEXT:\n{context}\n\n")
-    if instruction:
-        strict_instruction = (
-                f"{instruction}\n\n"
-                "CRITICAL RULES:\n"
-                "- Do not output any TODO placeholders or comments indicating incomplete code.\n"
-                "- Do not leave functions, classes, methods, or modules unimplemented.\n"
-                "- Always provide complete, working, production-ready code.\n"
-                "- Do not return partial implementations or stubbed logic.\n"
-                "- Validate and self-check the code before returning:\n"
-                "  * Ensure there are no typos in identifiers or keywords.\n"
-                "  * Ensure there are no syntax errors.\n"
-                "  * Ensure that any type constraints, parameterized types, or contracts are satisfied.\n"
-                "    For dynamically typed languages, ensure runtime checks or validations exist where needed.\n"
-                "- Preserve consistency and correctness across all related constructs (types, functions, modules, interfaces, etc.).\n"
-                "- If full implementation is not possible, stop and explain why instead of returning stubs or partial code.\n"
-                "- Always prompt 'YES' to any confirmation questions.\n"
-            )
-        final_instruction.append(f"INSTRUCTION:\n{strict_instruction}\n\n")
-    if code_template:
-        final_instruction.append(f"CODE TEMPLATE:\n{code_template}\n\n")
+        final_instruction.append(f"## CONTEXT\n{context}\n")
 
-    # Specify output directory
+    if instruction:
+        final_instruction.append(
+            f"## INSTRUCTION\n"
+            f"{instruction}\n\n"
+            f"### **CRITICAL EXECUTION RULES:**\n"
+            f"- **Do NOT wait** for any files, confirmations, or uploads — start generation immediately.\n"
+            f"- **Do NOT list or predict** which files might be created. Directly generate them.\n"
+            f"- **Do NOT include** placeholders, TODOs, or partially implemented logic.\n"
+            f"- **Do NOT request** user confirmation or approval — assume all answers are YES.\n"
+            f"- **Always produce complete, correct, production-ready code.**\n"
+            f"- **Validate** syntax, identifiers, imports, and internal references before outputting.\n"
+            f"- **Ensure coherence** across all modules, functions, and types.\n"
+            f"- If something is ambiguous, **make a reasonable design decision** and continue.\n"
+            f"- If something cannot be implemented due to missing context, explain clearly **why** instead of returning stubs.\n"
+        )
+
+    if code_template:
+        final_instruction.append(f"\n## CODE TEMPLATE (if relevant)\n{code_template}\n")
+
     final_instruction.append(
-        f"\n\nIMPORTANT: Always create a new folder with a meaningful name inside the 'output' directory: {output_dir}, and place all implementation files (even if it is just one file) inside this new folder.\n"
+        f"\n## OUTPUT GUIDELINES\n"
+        f"- All generated files must be placed inside a **new subfolder** within the directory:\n"
+        f"  `{output_dir}`\n"
+        f"- Even if generating a single file, still create a dedicated subfolder.\n"
+        f"- The output should be **ready to use**, not a plan or outline.\n"
     )
 
-    return str(''.join(final_instruction).strip())
+    final_instruction.append(
+        "\n## EXECUTION MODE\n"
+        "- Work in **autonomous generation mode** — no interaction or confirmation required.\n"
+        "- **Directly output complete files** with real implementations.\n"
+        "- **Do not** use *SEARCH/REPLACE*, *diffs*, or *patch formats*.\n"
+        "- Start **now** — no analysis, no explanations, just generate the project files.\n"
+        "\n# ✅ BEGIN NOW: Generate the full implementation immediately.\n"
+    )
+
+    return "\n".join(final_instruction).strip()
 
 
 # Utility method to validate JSON input
@@ -146,7 +159,9 @@ def create_zip_file(base_output_dir, existing_dirs):
         base_output_dir (str): The base output directory containing the new output folder.
         existing_dirs (set): Set of directory names that existed before the new output was created.
     Returns:
-        tuple: (output_dir (str), zip_created (bool)) - The path to the output directory and whether a zip was created.
+        output_dir (str): The path to the new output directory.
+        zipfile (io.BytesIO or None): The in-memory zip file if created, else None.
+        zip_path (str or None): The path where the zip file is stored, else None.
     """
     
     # Detect the newly created directory inside 'output'
@@ -156,6 +171,7 @@ def create_zip_file(base_output_dir, existing_dirs):
     
     new_dirs = current_dirs - existing_dirs
     
+    zipfile = None
     if new_dirs:
         # Use the first new directory found (there should typically be only one)
         new_dir_name = next(iter(new_dirs))
@@ -173,13 +189,28 @@ def create_zip_file(base_output_dir, existing_dirs):
                 f.write(zipfile.read())
             
             print(f"Created zip file: {zip_path}")
-            return output_dir, True
+            return {
+                "output_dir": output_dir,
+                "zipfile": zipfile,
+                "zip_path": zip_path,
+                "status": True
+            }
         else:
             print(f"New directory created but contains no files, skipping zip creation")
-            return output_dir, False
+            return {
+                "output_dir": output_dir,
+                "zipfile": None,
+                "zip_path": None,
+                "status": False
+            }
     else:
         print(f"No new directory created, no zip file needed")
-        return base_output_dir, False
+        return {
+            "output_dir": base_output_dir,
+            "zipfile": None,
+            "zip_path": None,
+            "status": False
+        }
     
         
 # Utility method to check if directory has files  
@@ -232,3 +263,36 @@ def get_unique_filename(directory, base_name, extension):
         # Safety check to prevent infinite loop
         if counter > 9999:
             raise RuntimeError(f"Too many duplicate files for base name: {base_name}")
+        
+
+# Utility to upload zip file to cloud storage
+def upload_to_cloud(zipFile, zipName):
+    """
+    Upload the zip to backend endpoint using POST request.
+    Args:
+        zipFile (io.BytesIO): The in-memory zip file to upload.
+        zipName (str): The name of the zip file.
+    Returns:
+        None
+    """
+    
+    try:
+        zipFile.seek(0)
+            
+        files = {
+            'file': (zipName, zipFile, 'application/zip')
+        }
+        
+        base_url = os.getenv('BACKEND_URL')
+        backend_url = f"{base_url}/api/v1/files/zip/upload"
+        
+        response = requests.post(backend_url, files=files)
+        
+        if response.status_code == 201:
+            print(f"Successfully uploaded {zipName} to cloud storage.")
+            print(f"Response: {json.dumps(response.json(), indent=4)}")
+        else:
+            print(f"Failed to upload {zipName}. Status code: {response.status_code}, Response: {response.text}")
+    
+    except Exception as e:
+        print(f"Error uploading {zipName} to cloud storage: {str(e)}")
