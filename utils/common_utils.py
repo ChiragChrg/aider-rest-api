@@ -21,34 +21,45 @@ def build_instruction(context:str, instruction:str, code_template:str, output_di
     final_instruction = []
 
     if context:
-        final_instruction.append(f"CONTEXT:\n{context}\n\n")
-    if instruction:
-        strict_instruction = (
-                f"{instruction}\n\n"
-                "CRITICAL RULES:\n"
-                "- Do not output any TODO placeholders or comments indicating incomplete code.\n"
-                "- Do not leave functions, classes, methods, or modules unimplemented.\n"
-                "- Always provide complete, working, production-ready code.\n"
-                "- Do not return partial implementations or stubbed logic.\n"
-                "- Validate and self-check the code before returning:\n"
-                "  * Ensure there are no typos in identifiers or keywords.\n"
-                "  * Ensure there are no syntax errors.\n"
-                "  * Ensure that any type constraints, parameterized types, or contracts are satisfied.\n"
-                "    For dynamically typed languages, ensure runtime checks or validations exist where needed.\n"
-                "- Preserve consistency and correctness across all related constructs (types, functions, modules, interfaces, etc.).\n"
-                "- If full implementation is not possible, stop and explain why instead of returning stubs or partial code.\n"
-                "- Always prompt 'YES' to any confirmation questions.\n"
-            )
-        final_instruction.append(f"INSTRUCTION:\n{strict_instruction}\n\n")
-    if code_template:
-        final_instruction.append(f"CODE TEMPLATE:\n{code_template}\n\n")
+        final_instruction.append(f"## CONTEXT\n{context}\n")
 
-    # Specify output directory
+    if instruction:
+        final_instruction.append(
+            f"## INSTRUCTION\n"
+            f"{instruction}\n\n"
+            f"### **CRITICAL EXECUTION RULES:**\n"
+            f"- **Do NOT wait** for any files, confirmations, or uploads — start generation immediately.\n"
+            f"- **Do NOT list or predict** which files might be created. Directly generate them.\n"
+            f"- **Do NOT include** placeholders, TODOs, or partially implemented logic.\n"
+            f"- **Do NOT request** user confirmation or approval — assume all answers are YES.\n"
+            f"- **Always produce complete, correct, production-ready code.**\n"
+            f"- **Validate** syntax, identifiers, imports, and internal references before outputting.\n"
+            f"- **Ensure coherence** across all modules, functions, and types.\n"
+            f"- If something is ambiguous, **make a reasonable design decision** and continue.\n"
+            f"- If something cannot be implemented due to missing context, explain clearly **why** instead of returning stubs.\n"
+        )
+
+    if code_template:
+        final_instruction.append(f"\n## CODE TEMPLATE (if relevant)\n{code_template}\n")
+
     final_instruction.append(
-        f"\n\nIMPORTANT: Always create a new folder with a meaningful name inside the 'output' directory: {output_dir}, and place all implementation files (even if it is just one file) inside this new folder.\n"
+        f"\n## OUTPUT GUIDELINES\n"
+        f"- All generated files must be placed inside a **new subfolder** within the directory:\n"
+        f"  `{output_dir}`\n"
+        f"- Even if generating a single file, still create a dedicated subfolder.\n"
+        f"- The output should be **ready to use**, not a plan or outline.\n"
     )
 
-    return str(''.join(final_instruction).strip())
+    final_instruction.append(
+        "\n## EXECUTION MODE\n"
+        "- Work in **autonomous generation mode** — no interaction or confirmation required.\n"
+        "- **Directly output complete files** with real implementations.\n"
+        "- **Do not** use *SEARCH/REPLACE*, *diffs*, or *patch formats*.\n"
+        "- Start **now** — no analysis, no explanations, just generate the project files.\n"
+        "\n# ✅ BEGIN NOW: Generate the full implementation immediately.\n"
+    )
+
+    return "\n".join(final_instruction).strip()
 
 
 # Utility method to validate JSON input
@@ -265,7 +276,9 @@ def upload_to_cloud(zipFile, zipName):
         None
     """
     
-    try:        
+    try:
+        zipFile.seek(0)
+            
         files = {
             'file': (zipName, zipFile, 'application/zip')
         }
