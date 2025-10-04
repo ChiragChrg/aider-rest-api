@@ -1,6 +1,6 @@
 from api.generate_code import GenerateCode
 
-# function print hello world
+# Function to generate code based on context, instruction, and template
 def generate():   
     context = "You are to generate a small Python utility project."
     instruction = "Create a few Python files under src/ and tests/ that print hello."
@@ -13,6 +13,5 @@ def generate():
         print(f"Error generating code: {str(e)}")
         
 
-# run on initialization
 if __name__ == "__main__":
     generate()
