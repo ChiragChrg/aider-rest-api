@@ -35,6 +35,7 @@ def build_instruction(context:str, instruction:str, code_template:str, output_di
                 "    For dynamically typed languages, ensure runtime checks or validations exist where needed.\n"
                 "- Preserve consistency and correctness across all related constructs (types, functions, modules, interfaces, etc.).\n"
                 "- If full implementation is not possible, stop and explain why instead of returning stubs or partial code.\n"
+                "- Always prompt 'YES' to any confirmation questions.\n"
             )
         final_instruction.append(f"INSTRUCTION:\n{strict_instruction}\n\n")
     if code_template:
@@ -42,7 +43,7 @@ def build_instruction(context:str, instruction:str, code_template:str, output_di
 
     # Specify output directory
     final_instruction.append(
-        f"\n\nIMPORTANT:\n - Always create a new folder with a meaningful name inside the 'output' directory: {output_dir}, and place all implementation files (even if it is just one file) inside this new folder.\n - Always prompt 'YES' to any confirmation questions.\n"
+        f"\n\nIMPORTANT: Always create a new folder with a meaningful name inside the 'output' directory: {output_dir}, and place all implementation files (even if it is just one file) inside this new folder.\n"
     )
 
     return str(''.join(final_instruction).strip())
@@ -140,11 +141,12 @@ def zip_directory(directory_path: str):
 def create_zip_file(base_output_dir, existing_dirs):
     """
     Create a zip file of the newly created output directory inside base_output_dir.
+    Only creates zip if there are actually new files created.
     Args:
         base_output_dir (str): The base output directory containing the new output folder.
         existing_dirs (set): Set of directory names that existed before the new output was created.
     Returns:
-        output_dir (str): The path to the new output directory that was zipped.
+        tuple: (output_dir (str), zip_created (bool)) - The path to the output directory and whether a zip was created.
     """
     
     # Detect the newly created directory inside 'output'
@@ -153,23 +155,80 @@ def create_zip_file(base_output_dir, existing_dirs):
         current_dirs = set(os.listdir(base_output_dir))
     
     new_dirs = current_dirs - existing_dirs
+    
     if new_dirs:
         # Use the first new directory found (there should typically be only one)
         new_dir_name = next(iter(new_dirs))
         output_dir = os.path.join(base_output_dir, new_dir_name)
         print(f"New output directory: {output_dir}")
+        
+        # Check if the new directory actually contains files
+        if directory_has_files(output_dir):
+            # Create a zip of the output directory
+            zipfile = zip_directory(output_dir)
+            
+            # Store the zipfile in output dir
+            zip_path = get_unique_filename(base_output_dir, new_dir_name, ".zip")
+            with open(zip_path, 'wb') as f:
+                f.write(zipfile.read())
+            
+            print(f"Created zip file: {zip_path}")
+            return output_dir, True
+        else:
+            print(f"New directory created but contains no files, skipping zip creation")
+            return output_dir, False
     else:
-        output_dir = base_output_dir
-        print(f"No new directory created, using base output directory: {output_dir}")
-        
+        print(f"No new directory created, no zip file needed")
+        return base_output_dir, False
     
-    # Create a zip of the output directory
-    zipfile = zip_directory(output_dir)
-    
-    # Store the zipfile in output dir
-    zip_name = new_dir_name if new_dirs else "output"
-    zip_path = os.path.join(base_output_dir, f"{zip_name}.zip")
-    with open(zip_path, 'wb') as f:
-        f.write(zipfile.read())
         
-    return output_dir
+# Utility method to check if directory has files  
+def directory_has_files(directory_path):
+    """
+    Check if a directory contains any files (recursively).
+    Args:
+        directory_path (str): Path to the directory to check.
+    Returns:
+        bool: True if directory contains files, False otherwise.
+    """
+    if not os.path.exists(directory_path):
+        return False
+    
+    for root, dirs, files in os.walk(directory_path):
+        if files:  # If any files are found
+            return True
+    
+    return False
+
+
+# Utility method to get a unique filename
+def get_unique_filename(directory, base_name, extension):
+    """
+    Generate a unique filename by adding incremental numbers if duplicates exist.
+    Args:
+        directory (str): The directory where the file will be created.
+        base_name (str): The base name for the file (without extension).
+        extension (str): The file extension (including the dot).
+    Returns:
+        str: A unique file path.
+    """
+    original_path = os.path.join(directory, f"{base_name}{extension}")
+    
+    # If the file doesn't exist, return the original path
+    if not os.path.exists(original_path):
+        return original_path
+    
+    # Find the next available number
+    counter = 1
+    while True:
+        new_name = f"{base_name}({counter}){extension}"
+        new_path = os.path.join(directory, new_name)
+        
+        if not os.path.exists(new_path):
+            return new_path
+        
+        counter += 1
+        
+        # Safety check to prevent infinite loop
+        if counter > 9999:
+            raise RuntimeError(f"Too many duplicate files for base name: {base_name}")

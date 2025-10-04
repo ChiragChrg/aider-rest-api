@@ -1,8 +1,8 @@
-from aider.coders import ArchitectCoder
+from aider.coders import Coder
 from aider.models import Model
 from aider.io import InputOutput
 
-def create_coder(model_name,files, auto_commits, dirty_commits, dry_run):
+def create_coder(model_name, auto_commits, dirty_commits, dry_run,files=None):
     """
     Create and return an ArchitectCoder instance with the specified configuration.
     
@@ -25,10 +25,19 @@ def create_coder(model_name,files, auto_commits, dirty_commits, dry_run):
         model = Model(model=model_name)
 
         # Create ArchitectCoder instance
-        coder = ArchitectCoder.create(
+        # coder = ArchitectCoder.create(
+        #     main_model=model,
+        #     fnames=[],
+        #     read_only_fnames=files if files else [],
+        #     io=io,
+        #     auto_commits=auto_commits,
+        #     dirty_commits=dirty_commits,
+        #     dry_run=dry_run,
+        # )
+        
+        # Create Coder instance
+        coder = Coder.create(
             main_model=model,
-            fnames=[],
-            read_only_fnames=files if files else [],
             io=io,
             auto_commits=auto_commits,
             dirty_commits=dirty_commits,
