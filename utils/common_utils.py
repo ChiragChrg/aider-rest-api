@@ -2,6 +2,8 @@ import os
 import io
 import zipfile
 import json
+import requests
+
 
 # Utility method to build instruction
 def build_instruction(context:str, instruction:str, code_template:str, output_dir:str):
@@ -146,7 +148,9 @@ def create_zip_file(base_output_dir, existing_dirs):
         base_output_dir (str): The base output directory containing the new output folder.
         existing_dirs (set): Set of directory names that existed before the new output was created.
     Returns:
-        tuple: (output_dir (str), zip_created (bool)) - The path to the output directory and whether a zip was created.
+        output_dir (str): The path to the new output directory.
+        zipfile (io.BytesIO or None): The in-memory zip file if created, else None.
+        zip_path (str or None): The path where the zip file is stored, else None.
     """
     
     # Detect the newly created directory inside 'output'
@@ -156,6 +160,7 @@ def create_zip_file(base_output_dir, existing_dirs):
     
     new_dirs = current_dirs - existing_dirs
     
+    zipfile = None
     if new_dirs:
         # Use the first new directory found (there should typically be only one)
         new_dir_name = next(iter(new_dirs))
@@ -173,13 +178,28 @@ def create_zip_file(base_output_dir, existing_dirs):
                 f.write(zipfile.read())
             
             print(f"Created zip file: {zip_path}")
-            return output_dir, True
+            return {
+                "output_dir": output_dir,
+                "zipfile": zipfile,
+                "zip_path": zip_path,
+                "status": True
+            }
         else:
             print(f"New directory created but contains no files, skipping zip creation")
-            return output_dir, False
+            return {
+                "output_dir": output_dir,
+                "zipfile": None,
+                "zip_path": None,
+                "status": False
+            }
     else:
         print(f"No new directory created, no zip file needed")
-        return base_output_dir, False
+        return {
+            "output_dir": base_output_dir,
+            "zipfile": None,
+            "zip_path": None,
+            "status": False
+        }
     
         
 # Utility method to check if directory has files  
@@ -232,3 +252,34 @@ def get_unique_filename(directory, base_name, extension):
         # Safety check to prevent infinite loop
         if counter > 9999:
             raise RuntimeError(f"Too many duplicate files for base name: {base_name}")
+        
+
+# Utility to upload zip file to cloud storage
+def upload_to_cloud(zipFile, zipName):
+    """
+    Upload the zip to backend endpoint using POST request.
+    Args:
+        zipFile (io.BytesIO): The in-memory zip file to upload.
+        zipName (str): The name of the zip file.
+    Returns:
+        None
+    """
+    
+    try:        
+        files = {
+            'file': (zipName, zipFile, 'application/zip')
+        }
+        
+        base_url = os.getenv('BACKEND_URL')
+        backend_url = f"{base_url}/api/v1/files/zip/upload"
+        
+        response = requests.post(backend_url, files=files)
+        
+        if response.status_code == 201:
+            print(f"Successfully uploaded {zipName} to cloud storage.")
+            print(f"Response: {response.json()}")
+        else:
+            print(f"Failed to upload {zipName}. Status code: {response.status_code}, Response: {response.text}")
+    
+    except Exception as e:
+        print(f"Error uploading {zipName} to cloud storage: {str(e)}")

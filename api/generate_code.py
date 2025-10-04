@@ -2,7 +2,7 @@ import os
 from flask import request
 from flask_restful import Resource
 from config import Config
-from utils.common_utils import build_instruction, setup_directory, create_zip_file, validate_json
+from utils.common_utils import build_instruction, setup_directory, create_zip_file, validate_json, upload_to_cloud
 from utils.aider_utils import create_coder, execute_instruction
 
 class GenerateCode(Resource):
@@ -22,6 +22,10 @@ class GenerateCode(Resource):
             # Return error if validation fails
             if not is_valid:
                 raise ValueError(data)
+            
+            # Ensure data is a dictionary
+            if not isinstance(data, dict):
+                raise ValueError("Invalid JSON payload")
             
             # Extract parameters from validated data
             instruction = data.get('instruction', '')
@@ -99,6 +103,7 @@ class GenerateCode(Resource):
             dict: A dictionary containing the response, status, directory, files processed and output directory.
         """
         
+        original_dir = None
         try:
             if context is None and instruction is None:
                 raise ValueError("'context' or 'instruction' is required")
@@ -144,7 +149,20 @@ class GenerateCode(Resource):
             result = execute_instruction(coder, full_instruction)
             
             # Create zip file of the new output directory
-            output_dir = create_zip_file(base_output_dir, existing_dirs)
+            zip_result = create_zip_file(base_output_dir, existing_dirs)
+            
+            output_dir = zip_result.get("output_dir")
+            zipFile = zip_result.get("zipfile")
+            zipName = zip_result.get("zip_path")
+            zipStatus = zip_result.get("status", False)
+            
+            # Return error if zip creation failed
+            if not zipStatus:
+                raise ValueError("No new files were generated, zip file not created.")
+            
+            # Upload zip file to cloud storage
+            if zipFile and zipName:
+                upload_to_cloud(zipFile, zipName)
             
             return {
                 "response": result,
