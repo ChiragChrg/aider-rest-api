@@ -152,72 +152,72 @@ class GenerateCode(Resource):
                 dry_run=options["dry_run"],
             )
 
-            temp_instruction = """
-            # Aider Instructions for Python Implementation
-            
-            ## Generated Instruction
-            Generate a Python implementation for the torque sensor transfer function analysis using the provided code template. Ensure to fill in the placeholders with appropriate logic for sensor specifications, error calculations, and performance assessments. Specifically, replace the following placeholders with relevant values:
-            - {{SENSOR_TYPE}}: e.g., "Torque Sensor"
-            - {{APPLICATION_NAME}}: e.g., "Torque Measurement"
-            - {{INPUT_PHYSICAL_QUANTITY}}: e.g., "Torque"
-            - {{OUTPUT_TYPES}}: e.g., ["Voltage", "Current"]
-            - {{SYSTEMATIC_ERROR_1}}: e.g., "Non-linearity"
-            - {{ERROR_1_DESCRIPTION}}: e.g., "Deviation from the ideal output"
-            - {{NONLINEARITY_SPEC}}: e.g., 0.01
-            - {{HYSTERESIS_SPEC}}: e.g., 0.005
-            - {{TEMP_DRIFT_SPEC}}: e.g., 0.002
-            - {{REPEATABILITY_SPEC}}: e.g., 0.001
-            - {{NOISE_SPEC}}: e.g., 0.0005
-            - {{CALIBRATION_METADATA}}: e.g., "Calibration performed on 2023-01-01"
-            - {{PARAMETER_INITIALIZATION_LOGIC}}: Logic to initialize parameters based on sensor specs
-            - {{OUTPUT_UNIT}}: e.g., "Nm"
-            - {{SENSITIVITY_UNIT}}: e.g., "V/Nm"
-            - {{INPUT_UNIT}}: e.g., "Nm"
-            - {{LINEAR_SENSITIVITY_CALCULATION}}: Logic for calculating linear sensitivity
-            - {{NOMINAL_OUTPUT_VALUE}}: e.g., 5.0
-            - {{ZERO_INPUT_OUTPUT}}: e.g., 0.0
-            - {{NONLINEAR_FITTING_METHOD}}: Logic for fitting non-linear models
-            - {{OFFSET_CALCULATION}}: Logic for calculating offset
-            - {{DEFAULT_OFFSET_VALUE}}: e.g., 0.0
-            - {{ADDITIONAL_SYSTEMATIC_ERRORS}}: Any extra systematic errors
-            - {{ADDITIONAL_RANDOM_ERRORS}}: Any extra random errors
-            - {{ADDITIONAL_SYSTEMATIC_CALCULATIONS}}: Additional calculations for systematic errors
-            - {{ADDITIONAL_RANDOM_ERROR_COMPONENTS}}: Additional components for random errors
-            - {{ADDITIONAL_RANDOM_ERROR_STD}}: Additional standard deviations for random errors
-            - {{ACCURACY_SPEC}}: e.g., "±0.1%"
-            - {{RESPONSE_TIME_SPEC}}: e.g., "50 ms"
-            - {{DRIFT_SPEC}}: e.g., "0.01 Nm per year"
-            - {{NOISE_LEVEL_SPEC}}: e.g., "0.0005 Nm"
-            - {{ADDITIONAL_PERFORMANCE_METRICS}}: Any extra performance metrics
-            - {{ACCURACY_ASSESSMENT_LOGIC}}: Logic for assessing accuracy
-            - {{RESPONSE_TIME_LOGIC}}: Logic for assessing response time
-            
-            ## Implementation Steps
-            1. Define the SensorSpecifications and ErrorParameters dataclasses to encapsulate sensor details and error characteristics.
-            2. Implement the MathUtils class with methods for polynomial fitting, interpolation, filtering, and error calculations.
-            3. Create the TransferFunctionAnalyzer class to handle the transfer function analysis, including methods for calculating ideal outputs, systematic errors, and measured outputs.
-            4. In the TransferFunctionAnalyzer, initialize parameters based on sensor specifications and calibration data.
-            5. Implement methods to calculate systematic errors and generate random errors based on defined error parameters.
-            6. Create a PerformanceAnalyzer class to assess the sensor's performance against specified metrics.
-            7. Implement methods in PerformanceAnalyzer to evaluate accuracy and response time based on test inputs and reference outputs.
-            8. Use logging to track the initialization and calculations throughout the analysis process.
-            
-            ## Required Libraries
-            numpy, matplotlib, typing, dataclasses, logging
-            
-            ## Input Variables
-            nominal_torque: float, temperature: float, time: float
-            
-            ## Output Variables
-            frequency_output: float, voltage_output: float
-            """
+            # temp_instruction = """
+            # # Aider Instructions for Python Implementation
+
+            # ## Generated Instruction
+            # Generate a Python implementation for the torque sensor transfer function analysis using the provided code template. Ensure to fill in the placeholders with appropriate logic for sensor specifications, error calculations, and performance assessments. Specifically, replace the following placeholders with relevant values:
+            # - {{SENSOR_TYPE}}: e.g., "Torque Sensor"
+            # - {{APPLICATION_NAME}}: e.g., "Torque Measurement"
+            # - {{INPUT_PHYSICAL_QUANTITY}}: e.g., "Torque"
+            # - {{OUTPUT_TYPES}}: e.g., ["Voltage", "Current"]
+            # - {{SYSTEMATIC_ERROR_1}}: e.g., "Non-linearity"
+            # - {{ERROR_1_DESCRIPTION}}: e.g., "Deviation from the ideal output"
+            # - {{NONLINEARITY_SPEC}}: e.g., 0.01
+            # - {{HYSTERESIS_SPEC}}: e.g., 0.005
+            # - {{TEMP_DRIFT_SPEC}}: e.g., 0.002
+            # - {{REPEATABILITY_SPEC}}: e.g., 0.001
+            # - {{NOISE_SPEC}}: e.g., 0.0005
+            # - {{CALIBRATION_METADATA}}: e.g., "Calibration performed on 2023-01-01"
+            # - {{PARAMETER_INITIALIZATION_LOGIC}}: Logic to initialize parameters based on sensor specs
+            # - {{OUTPUT_UNIT}}: e.g., "Nm"
+            # - {{SENSITIVITY_UNIT}}: e.g., "V/Nm"
+            # - {{INPUT_UNIT}}: e.g., "Nm"
+            # - {{LINEAR_SENSITIVITY_CALCULATION}}: Logic for calculating linear sensitivity
+            # - {{NOMINAL_OUTPUT_VALUE}}: e.g., 5.0
+            # - {{ZERO_INPUT_OUTPUT}}: e.g., 0.0
+            # - {{NONLINEAR_FITTING_METHOD}}: Logic for fitting non-linear models
+            # - {{OFFSET_CALCULATION}}: Logic for calculating offset
+            # - {{DEFAULT_OFFSET_VALUE}}: e.g., 0.0
+            # - {{ADDITIONAL_SYSTEMATIC_ERRORS}}: Any extra systematic errors
+            # - {{ADDITIONAL_RANDOM_ERRORS}}: Any extra random errors
+            # - {{ADDITIONAL_SYSTEMATIC_CALCULATIONS}}: Additional calculations for systematic errors
+            # - {{ADDITIONAL_RANDOM_ERROR_COMPONENTS}}: Additional components for random errors
+            # - {{ADDITIONAL_RANDOM_ERROR_STD}}: Additional standard deviations for random errors
+            # - {{ACCURACY_SPEC}}: e.g., "±0.1%"
+            # - {{RESPONSE_TIME_SPEC}}: e.g., "50 ms"
+            # - {{DRIFT_SPEC}}: e.g., "0.01 Nm per year"
+            # - {{NOISE_LEVEL_SPEC}}: e.g., "0.0005 Nm"
+            # - {{ADDITIONAL_PERFORMANCE_METRICS}}: Any extra performance metrics
+            # - {{ACCURACY_ASSESSMENT_LOGIC}}: Logic for assessing accuracy
+            # - {{RESPONSE_TIME_LOGIC}}: Logic for assessing response time
+
+            # ## Implementation Steps
+            # 1. Define the SensorSpecifications and ErrorParameters dataclasses to encapsulate sensor details and error characteristics.
+            # 2. Implement the MathUtils class with methods for polynomial fitting, interpolation, filtering, and error calculations.
+            # 3. Create the TransferFunctionAnalyzer class to handle the transfer function analysis, including methods for calculating ideal outputs, systematic errors, and measured outputs.
+            # 4. In the TransferFunctionAnalyzer, initialize parameters based on sensor specifications and calibration data.
+            # 5. Implement methods to calculate systematic errors and generate random errors based on defined error parameters.
+            # 6. Create a PerformanceAnalyzer class to assess the sensor's performance against specified metrics.
+            # 7. Implement methods in PerformanceAnalyzer to evaluate accuracy and response time based on test inputs and reference outputs.
+            # 8. Use logging to track the initialization and calculations throughout the analysis process.
+
+            # ## Required Libraries
+            # numpy, matplotlib, typing, dataclasses, logging
+
+            # ## Input Variables
+            # nominal_torque: float, temperature: float, time: float
+
+            # ## Output Variables
+            # frequency_output: float, voltage_output: float
+            # """
 
             # Build complete instruction
             # full_instruction = build_instruction(
             #     context, instruction, code_template, base_output_dir
             # )
             full_instruction = build_instruction(
-                temp_instruction, None, None, base_output_dir
+                instruction, None, None, base_output_dir
             )
 
             # Execute the instruction

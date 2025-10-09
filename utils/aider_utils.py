@@ -20,7 +20,7 @@ def create_coder(model_name, auto_commits, dirty_commits, dry_run, files=None):
 
     try:
         # Create InputOutput for non-interactive mode with all confirmations disabled
-        io = InputOutput(yes=True, pretty=False)
+        io = InputOutput(yes=True, pretty=True)
 
         # Create model instance
         model = Model(model=model_name)
@@ -28,21 +28,23 @@ def create_coder(model_name, auto_commits, dirty_commits, dry_run, files=None):
         # Create ArchitectCoder instance
         # coder = ArchitectCoder.create(
         #     main_model=model,
-        #     fnames=[],
-        #     read_only_fnames=files if files else [],
+        #     read_only_fnames=files if files else None,
         #     io=io,
         #     auto_commits=auto_commits,
         #     dirty_commits=dirty_commits,
         #     dry_run=dry_run,
+        #     use_git=False,  # Disable git integration
         # )
 
         # Create Coder instance
         coder = ArchitectCoder.create(
             main_model=model,
+            read_only_fnames=files if files else None,
             io=io,
             auto_commits=auto_commits,
             dirty_commits=dirty_commits,
             dry_run=dry_run,
+            use_git=False,  # Disable git integration
         )
 
         return coder
